@@ -113,7 +113,7 @@ GPSDriverUBX::configure(unsigned &baudrate, const GPSConfig &config)
 		unsigned baud_i;
 		unsigned desired_baudrate = auto_baudrate ? UBX_BAUDRATE_M8_AND_NEWER : baudrate;
 
-		if ((_mode == UBXMode::RoverWithMovingBaseUART1) || (_mode == UBXMode::MovingBaseUART1)) {
+		if ((_mode == UBXMode::RoverWithMovingBaseUART1) || (_mode == UBXMode::MovingBaseUART1) || (_mode == UBXMode::Normal)) {
 			desired_baudrate = UART1_BAUDRATE_HEADING;
 		}
 
@@ -574,14 +574,14 @@ int GPSDriverUBX::configureDevice(const GPSConfig &config, const int32_t uart2_b
 	// measurement rate
 	// In case of F9P not in moving base mode we use 10Hz, otherwise 8Hz (receivers such as M9N can go higher as well, but
 	// the number of used satellites will be restricted to 16. Not mentioned in datasheet)
-	int rate_meas;
-
+	int rate_meas = 125;
+	/*
 	if (_mode != UBXMode::Normal) {
 		rate_meas = 125; //8Hz for heading.
 
 	} else {
 		rate_meas = (_board == Board::u_blox9_F9P) ? 100 : 125;
-	}
+	}*/
 
 	cfgValset<uint16_t>(UBX_CFG_KEY_RATE_MEAS, rate_meas, cfg_valset_msg_size);
 	cfgValset<uint16_t>(UBX_CFG_KEY_RATE_NAV, 1, cfg_valset_msg_size);
@@ -689,9 +689,9 @@ int GPSDriverUBX::configureDevice(const GPSConfig &config, const int32_t uart2_b
 		cfgValsetPort(UBX_CFG_KEY_MSGOUT_UBX_RXM_RTCM_I2C, 1, cfg_valset_msg_size);
 	}
 
-    if (_mode == UBXMode::Normal) {
+    /*if (_mode == UBXMode::Normal) {
 		cfgValset<uint8_t>(UBX_CFG_KEY_MSGOUT_UBX_NAV_RELPOSNED_UART1, 1, cfg_valset_msg_size);
-    }
+    }*/
 
 	if (!sendMessage(UBX_MSG_CFG_VALSET, (uint8_t *)&_buf, cfg_valset_msg_size)) {
 		return -1;
@@ -793,7 +793,7 @@ int GPSDriverUBX::configureDevice(const GPSConfig &config, const int32_t uart2_b
 			return -1;
 		}
 
-	} else if (_mode == UBXMode::RoverWithMovingBaseUART1) {
+	} else if ((_mode == UBXMode::RoverWithMovingBaseUART1)  || (_mode == UBXMode::Normal)) {
 		UBX_DEBUG("Configuring UART1 for rover");
 		// heading output period 1 second
 		cfg_valset_msg_size = initCfgValset();
@@ -2142,7 +2142,7 @@ GPSDriverUBX::payloadRxDone()
 	case UBX_MSG_NAV_RELPOSNED:
 		UBX_TRACE_RXMSG("Rx NAV-RELPOSNED");
 
-		if ((_mode == UBXMode::RoverWithMovingBase) || (_mode == UBXMode::RoverWithMovingBaseUART1)) {
+		if ((_mode == UBXMode::RoverWithMovingBase) || (_mode == UBXMode::RoverWithMovingBaseUART1) || (_mode == UBXMode::Normal)) {
 			float heading = _buf.payload_rx_nav_relposned.relPosHeading * 1e-5f;
 			float heading_acc = _buf.payload_rx_nav_relposned.accHeading * 1e-5f;
 			float rel_length = _buf.payload_rx_nav_relposned.relPosLength + _buf.payload_rx_nav_relposned.relPosHPLength * 1e-2f;
